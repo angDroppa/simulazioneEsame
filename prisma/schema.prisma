@@ -1,0 +1,88 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../app/generated/prisma"
+  // previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["tracking"]
+}
+
+model Role {
+  role  String @id
+  users User[]
+
+  @@schema("tracking")
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  firstName String
+  lastName  String
+  email     String     @unique
+  password  String
+  consegna  Consegna[]
+  role      Role       @relation(fields: [roleName], references: [role])
+  roleName  String     @default("OPERATORE")
+
+  refreshTokens RefreshToken[]
+
+  @@schema("tracking")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("tracking")
+}
+
+model Cliente {
+  id         Int      @id @default(autoincrement())
+  nominativo String
+  via        String
+  comune     String
+  paese      String
+  telefono   String?
+  email      String?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  consegne Consegna[]
+
+  @@schema("tracking")
+}
+
+model StatoConsegna {
+  id          Int    @id @default(autoincrement())
+  descrizione String @unique
+
+  consegne Consegna[]
+
+  @@schema("tracking")
+}
+
+model Consegna {
+  id             Int      @id @default(autoincrement())
+  chiaveConsegna String   @unique @default(cuid())
+  dataRitiro     DateTime
+  dataConsegna   DateTime
+  createdAt      DateTime @default(now())
+
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  operatoreId Int
+  operatore   User @relation(fields: [operatoreId], references: [id])
+
+  statoId Int
+  stato   StatoConsegna @relation(fields: [statoId], references: [id])
+
+  @@schema("tracking")
+}

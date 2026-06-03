@@ -19,45 +19,47 @@ function formatTempo(ore: number | null): string {
   return `${giorni} giorni`
 }
 
+function getDefaultDates() {
+  const today = new Date()
+  const yearAgo = new Date()
+  yearAgo.setFullYear(today.getFullYear() - 1)
+  return {
+    dal: yearAgo.toISOString().split('T')[0],
+    al: today.toISOString().split('T')[0],
+  }
+}
+
+const defaults = getDefaultDates()
+
 export default function StatistichePage() {
-  const [dal, setDal] = useState('')
-  const [al, setAl] = useState('')
+  const [dal, setDal] = useState(defaults.dal)
+  const [al, setAl] = useState(defaults.al)
   const [statoId, setStatoId] = useState<string>('')
 
   const [data, setData] = useState<StatisticheResponse | null>(null)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  useEffect(() => {
     if (!dal || !al) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await statisticheApi.get({
-        dal,
-        al,
-        statoId: statoId ? Number(statoId) : undefined,
-      })
-      setData(res)
-    } catch {
-      setError('Errore nel caricamento dei dati.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  useEffect(() => {
-    const today = new Date()
-    const weekAgo = new Date()
-    weekAgo.setDate(today.getDate() - 7)
-    setDal(weekAgo.toISOString().split('T')[0])
-    setAl(today.toISOString().split('T')[0])
-  }, [])
+    let active = true
 
-  useEffect(() => {
-    if (dal && al) load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    statisticheApi
+      .get({ dal, al, statoId: statoId ? Number(statoId) : undefined })
+      .then((res) => { if (active) setData(res) })
+      .catch(() => { if (active) setError('Errore nel caricamento dei dati.') })
+
+    return () => { active = false }
   }, [dal, al, statoId])
+
+  const reload = () => {
+    if (!dal || !al) return
+    setError(null)
+    statisticheApi
+      .get({ dal, al, statoId: statoId ? Number(statoId) : undefined })
+      .then((res) => setData(res))
+      .catch(() => setError('Errore nel caricamento dei dati.'))
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -103,12 +105,8 @@ export default function StatistichePage() {
           </select>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={load}
-          disabled={loading}
-        >
-          {loading ? 'Caricamento...' : 'Aggiorna'}
+        <button className="btn btn-primary" onClick={reload}>
+          Aggiorna
         </button>
       </div>
 
